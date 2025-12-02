@@ -40,8 +40,15 @@ func Create(db *database.Database, input *WebhookInput) error {
 	)
 }
 
-func List(db *database.Database) ([]WebhookRecord, error) {
-	results := []WebhookRecord{}
+func Get(db *database.Database, id string) (*WebhookRecord, error) {
+	var output WebhookRecord
+	row := db.QueryRow(`SELECT id, endpoint, method, headers, body, ip, created_at FROM webhooks WHERE id = ?;`, id)
+
+	return &output, row.Scan(&output.ID, &output.Endpoint, &output.Method, &output.Headers, &output.Body, &output.IP, &output.CreatedAt)
+}
+
+func List(db *database.Database) ([]*WebhookRecord, error) {
+	results := []*WebhookRecord{}
 	rows, err := db.Query(`SELECT id, endpoint, method, headers, body, ip, created_at FROM webhooks;`)
 	if err != nil {
 		return nil, err
@@ -61,7 +68,7 @@ func List(db *database.Database) ([]WebhookRecord, error) {
 			return nil, err
 		}
 
-		results = append(results, record)
+		results = append(results, &record)
 	}
 	return results, nil
 }

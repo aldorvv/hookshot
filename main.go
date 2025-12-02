@@ -31,6 +31,7 @@ func main() {
 	webhookHandler := webhook.NewHandler(db)
 	r.HandleFunc("/w/{endpoint}", webhookHandler.Capture)
 	r.Get("/api/webhooks", webhookHandler.List)
+	r.Get("/api/webhooks/{id}", webhookHandler.Get)
 
 	srv := &http.Server{
 		// IDEM, replace port by an env var

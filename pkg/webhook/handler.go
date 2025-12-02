@@ -19,34 +19,46 @@ func NewHandler(db *database.Database) *Handler {
 
 func (h *Handler) Capture(w http.ResponseWriter, r *http.Request) {
 	endpoint := chi.URLParam(r, "endpoint")
-	bodyBytes, _ := io.ReadAll(r.Body)
-	headersJSON, _ := json.Marshal(r.Header)
+	body, _ := io.ReadAll(r.Body)
+	headers, _ := json.Marshal(r.Header)
 
 	input := &WebhookInput{
 		Endpoint: endpoint,
 		Method:   r.Method,
-		Headers:  headersJSON,
-		Body:     bodyBytes,
+		Headers:  headers,
+		Body:     body,
 		IP:       r.RemoteAddr,
 	}
 
 	if err := Create(h.db, input); err != nil {
-		w.WriteHeader(500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.WriteHeader(201)
+	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(`{"status": "captured"}`))
+}
+
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	record, err := Get(h.db, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(record)
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	results, err := List(h.db)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(results)
 }

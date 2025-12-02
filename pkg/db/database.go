@@ -60,3 +60,7 @@ func (db *Database) Exec(query string, args ...any) error {
 func (db *Database) Query(query string, args ...any) (*sql.Rows, error) {
 	return db.conn.Query(query, args...)
 }
+
+func (db *Database) QueryRow(query string, args ...any) *sql.Row {
+	return db.conn.QueryRow(query, args...)
+}
