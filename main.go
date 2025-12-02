@@ -19,7 +19,7 @@ func main() {
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"message": "hearthbeat!"}`))
+		w.Write([]byte(`{"message": "heartbeat!"}`))
 	})
 
 	// TODO: Replace by env var
@@ -29,10 +29,11 @@ func main() {
 	}
 
 	webhookHandler := webhook.NewHandler(db)
-	r.Post("/webhooks", webhookHandler.Post)
-	r.Get("/webhooks", webhookHandler.List)
+	r.HandleFunc("/w/{endpoint}", webhookHandler.Capture)
+	r.Get("/api/webhooks", webhookHandler.List)
 
 	srv := &http.Server{
+		// IDEM, replace port by an env var
 		Addr:        fmt.Sprintf("0.0.0.0:%d", 2407),
 		Handler:     r,
 		IdleTimeout: 60 * time.Second,

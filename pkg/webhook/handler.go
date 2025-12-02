@@ -2,11 +2,11 @@ package webhook
 
 import (
 	"encoding/json"
-	"errors"
+	"io"
 	"net/http"
-	"strings"
 
 	database "echook.io/pkg/db"
+	"github.com/go-chi/chi/v5"
 )
 
 type Handler struct {
@@ -17,29 +17,17 @@ func NewHandler(db *database.Database) *Handler {
 	return &Handler{db: db}
 }
 
-func JSON[T any](r *http.Request) (T, error) {
-	var zero T
-	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
-		return zero, errors.New("could not deserialize")
-	}
-	defer r.Body.Close()
+func (h *Handler) Capture(w http.ResponseWriter, r *http.Request) {
+	endpoint := chi.URLParam(r, "endpoint")
+	bodyBytes, _ := io.ReadAll(r.Body)
+	headersJSON, _ := json.Marshal(r.Header)
 
-	var v T
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-
-	if err := dec.Decode(&v); err != nil {
-		return zero, err
-	}
-
-	return v, nil
-}
-
-func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
-	input, err := JSON[*WebhookInput](r)
-	if err != nil {
-		w.WriteHeader(400)
-		return
+	input := &WebhookInput{
+		Endpoint: endpoint,
+		Method:   r.Method,
+		Headers:  headersJSON,
+		Body:     bodyBytes,
+		IP:       r.RemoteAddr,
 	}
 
 	if err := Create(h.db, input); err != nil {
@@ -48,6 +36,7 @@ func (h *Handler) Post(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(201)
+	w.Write([]byte(`{"status": "captured"}`))
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
